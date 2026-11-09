@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="HÉLIOS·CEP — Projeto Integrador: sistema autônomo de aquecimento solar de piscina, integrando física da radiação, robótica com sensores e programação.">
+<title>HÉLIOS·CEP · Radiação Solar e Aquecimento Inteligente</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☀️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700&family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&family=Unbounded:wght@500;700;900&display=swap" rel="stylesheet">
+
+<style>
+/* =========================================
+   1. VARIÁVEIS E TEMAS (Design System)
+   ========================================= */
+:root {
+  --bg: #020617; --bg2: #0f172a; --paper: rgba(30, 41, 59, 0.7); 
+  --ink: #f8fafc; --ink2: #94a3b8;
+  --teal: #2dd4bf; --teal-glow: rgba(45, 212, 191, 0.3);
+  --aqua: #38bdf8; --aqua-glow: rgba(56, 189, 248, 0.3);
+  --orange: #f97316; --amber: #fbbf24;
+  --line: rgba(148, 163, 184, 0.2); 
+  --shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.5);
+  --f-disp: 'Unbounded', sans-serif; 
+  --f-body: 'Space Grotesk', sans-serif; 
+  --f-mono: 'Space Mono', monospace;
+}
+
+body.hc {
+  --bg: #000000; --bg2: #000000; --paper: #000000; 
+  --ink: #ffffff; --ink2: #fbbf24;
+  --teal: #fbbf24; --teal-glow: transparent;
+  --aqua: #fbbf24; --aqua-glow: transparent;
+  --orange: #fbbf24; --amber: #fbbf24;
+  --line: #ffffff; --shadow: 4px 4px 0 #fbbf24;
+}
+
+body.dyslexia {
+  --f-body: 'Lexend', sans-serif; --f-disp: 'Lexend', sans-serif; --f-mono: 'Lexend', monospace;
+}
+body.dyslexia p, body.dyslexia li, body.dyslexia span, body.dyslexia div {
+  letter-spacing: 0.05em !important;
+  word-spacing: 0.1em !important;
+  line-height: 1.8 !important;
+}
+
+/* =========================================
+   2. RESET E BASE
+   ========================================= */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { 
+  background: var(--bg); 
+  color: var(--ink); 
+  font-family: var(--f-body); 
+  font-size: 1.06rem; 
+  line-height: 1.7; 
+  overflow-x: hidden; 
+  position: relative;
+}
+
+/* Background Animado de Partículas (Fótons) */
+.bg-mesh {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: 
+    radial-gradient(circle at 15% 50%, rgba(56, 189, 248, 0.08), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(249, 115, 22, 0.08), transparent 25%);
+}
+.bg-mesh::before {
+  content: ''; position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2394a3b8' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  animation: meshMove 60s linear infinite;
+}
+@keyframes meshMove { from { background-position: 0 0; } to { background-position: 100px 100px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .bg-mesh::before { animation: none; }
+}
+
+img, svg, canvas { max-width: 100%; display: block; }
+a { color: var(--aqua); text-decoration: none; transition: color 0.2s; }
+a:hover { color: var(--amber); }
+:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+
+.wrap { width: min(1200px, 92%); margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-disp); line-height: 1.15; letter-spacing: -0.02em; }
+
+/* =========================================
+   3. ACESSIBILIDADE E UTILITÁRIOS
+   ========================================= */
+.skip { position: absolute; left: -999px; top: 0; background: var(--amber); color: #000; padding: 1rem 1.5rem; z-index: 9999; font-family: var(--f-mono); font-weight: 700; border-radius: 0 0 8px 0; }
+.skip:focus { left: 0; top: 0; }
+
+.progress { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: transparent; z-index: 9998; }
+.progress span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--amber), var(--orange), var(--teal)); transition: width 0.1s linear; box-shadow: 0 0 10px var(--amber); }
+
+.glass-panel {
+  background: var(--paper);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: transform 0.3s ease, border-color 0.3s ease;
+}
+.glass-panel:hover { border-color: var(--aqua); }
+
+.rv { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+.rv.in { opacity: 1; transform: none; }
+
+/* =========================================
+   4. HEADER E NAVEGAÇÃO
+   ========================================= */
+.topbar { 
+  position: sticky; top: 0; z-index: 1000; 
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: 0.8rem 4%; 
+  background: rgba(2, 6, 23, 0.85); 
+  backdrop-filter: blur(16px); 
+  border-bottom: 1px solid var(--line); 
+}
+.brand { font-family: var(--f-disp); font-weight: 900; font-size: 1.2rem; color: var(--ink); display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
+.brand-sun { width: 24px; height: 24px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 3px var(--bg), 0 0 15px var(--amber); animation: pulse 3s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 3px var(--bg), 0 0 15px var(--amber); } 50% { transform: scale(1.1); box-shadow: 0 0 0 3px var(--bg), 0 0 25px var(--orange); } }
+.brand em { font-style: normal; color: var(--aqua); }
+
+.topbar nav { display: flex; gap: 0.2rem; flex-wrap: wrap; margin-inline: auto; }
+.topbar nav a { font-family: var(--f-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink2); padding: 0.5rem 0.8rem; border-radius: 8px; transition: all 0.2s; }
+.topbar nav a:hover, .topbar nav a.active { background: rgba(255,255,255,0.1); color: var(--ink); }
+
+.a11y-tools { display: flex; gap: 0.4rem; align-items: center; }
+.a11y-tools button { 
+  font-family: var(--f-mono); font-size: 0.75rem; font-weight: 700; 
+  min-width: 40px; min-height: 40px; background: rgba(255,255,255,0.05); 
+  border: 1px solid var(--line); border-radius: 8px; cursor: pointer; color: var(--ink); 
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center; 
+}
+.a11y-tools button:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+.a11y-tools button[aria-pressed="true"] { background: var(--amber); color: #000; border-color: var(--amber); }
+
+.hamb { display: none; font-size: 1.5rem; background: transparent; border: none; color: var(--ink); cursor: pointer; }
+@media (max-width: 1020px) {
+  .hamb { display: block; }
+  .topbar nav { display: none; width: 100%; flex-direction: column; border-top: 1px solid var(--line); padding-top: 1rem; margin-top: 0.5rem; }
+  .topbar nav.open { display: flex; animation: slideDown 0.3s ease; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+}
+
+/* =========================================
+   5. SEÇÕES PRINCIPAIS
+   ========================================= */
+section { padding: 6rem 0; position: relative; }
+.sec-head { margin-bottom: 3rem; text-align: center; max-width: 800px; margin-inline: auto; }
+.sec-num { font-family: var(--f-mono); font-size: 0.8rem; letter-spacing: 0.2em; color: var(--orange); display: flex; align-items: center; justify-content: center; gap: 1rem; margin-bottom: 1rem; }
+.sec-num::before, .sec-num::after { content: ""; height: 1px; width: 40px; background: var(--orange); opacity: 0.5; }
+.sec-head h2 { font-size: clamp(2rem, 5vw, 3.2rem); margin-bottom: 1rem; background: linear-gradient(135deg, var(--ink) 0%, var(--ink2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.sec-head p.lead { color: var(--ink2); font-size: 1.15rem; }
+
+/* Hero */
+.hero { padding: 8rem 0 5rem; text-align: center; overflow: hidden; }
+.hero h1 { font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 900; margin-bottom: 1.5rem; line-height: 1.1; }
+.hero h1 .sol { color: var(--orange); text-shadow: 0 0 40px rgba(249, 115, 22, 0.3); }
+.hero h1 .agua { color: var(--aqua); text-shadow: 0 0 40px rgba(56, 189, 248, 0.3); }
+.hero .tagline { font-size: 1.25rem; max-width: 60ch; margin: 0 auto 2.5rem; color: var(--ink2); }
+.chips { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: center; margin-bottom: 2.5rem; }
+.chip { font-family: var(--f-mono); font-size: 0.75rem; padding: 0.5rem 1rem; border: 1px solid var(--line); border-radius: 99px; background: rgba(255,255,255,0.03); color: var(--ink2); display: flex; align-items: center; gap: 0.4rem; }
+
+.btn { 
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font-family: var(--f-mono); font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 1rem 2rem; border: none; border-radius: 12px; cursor: pointer;
+  background: linear-gradient(135deg, var(--amber), var(--orange)); color: #000; 
+  box-shadow: 0 10px 30px -10px rgba(249, 115, 22, 0.5); transition: all 0.3s; 
+}
+.btn:hover { transform: translateY(-3px); box-shadow: 0 15px 40px -10px rgba(249, 115, 22, 0.7); }
+
+/* Desafio */
+#desafio { background: var(--bg2); }
+.desafio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+@media (max-width: 900px) { .desafio-grid { grid-template-columns: 1fr; } }
+.questions-list { list-style: none; }
+.questions-list li { 
+  padding: 1.5rem; background: rgba(255,255,255,0.02); border-left: 4px solid var(--orange); 
+  margin-bottom: 1rem; border-radius: 0 12px 12px 0; transition: transform 0.2s; 
+}
+.questions-list li:hover { transform: translateX(5px); background: rgba(255,255,255,0.04); }
+.questions-list li strong { color: var(--amber); display: block; margin-bottom: 0.4rem; font-family: var(--f-mono); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+/* Pilares */
+.pillars-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+.pillar-card { padding: 2rem; position: relative; overflow: hidden; }
+.pillar-card::before { content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 4px; background: var(--accent, var(--aqua)); }
+.pillar-card.physics { --accent: var(--orange); }
+.pillar-card.robotics { --accent: var(--teal); }
+.pillar-card.code { --accent: var(--amber); }
+.pillar-card.a11y { --accent: var(--aqua); }
+.pillar-icon { font-size: 2.5rem; margin-bottom: 1.2rem; display: block; }
+.pillar-card h3 { font-size: 1.2rem; margin-bottom: 0.8rem; color: var(--accent); }
+.pillar-card p { font-size: 0.95rem; color: var(--ink2); line-height: 1.6; }
+
+/* =========================================
+   6. FÍSICA: ESPECTRO INTERATIVO
+   ========================================= */
+#fisica { background: var(--bg); }
+.spectrum-container { margin-top: 2rem; padding: 2rem; border-radius: 16px; background: rgba(0,0,0,0.3); border: 1px solid var(--line); }
+.spectrum-bar { 
+  height: 60px; border-radius: 8px; display: flex; overflow: hidden; margin-bottom: 1.5rem; cursor: crosshair;
+  background: linear-gradient(90deg, 
+    #8a2be2 0%, #8a2be2 15%, /* UV */
+    #4169e1 15%, #00ff00 50%, #ff0000 85%, /* Visível */
+    #8b0000 85%, #8b0000 100% /* IV */
+  );
+  position: relative;
+}
+.spectrum-segment { flex: 1; display: flex; align-items: center; justify-content: center; font-family: var(--f-mono); font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.8); text-shadow: 0 1px 3px rgba(0,0,0,0.8); transition: flex 0.3s ease, filter 0.3s; position: relative; }
+.spectrum-segment:hover { flex: 2; filter: brightness(1.2); z-index: 2; }
+.spectrum-segment::after { content: attr(data-label); }
+
+.spectrum-info { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; min-height: 150px; }
+.spectrum-text h4 { font-family: var(--f-disp); color: var(--amber); font-size: 1.3rem; margin-bottom: 0.5rem; }
+.spectrum-text p { color: var(--ink2); line-height: 1.7; }
+
+/* Animação de Moléculas */
+.molecule-box { display: flex; justify-content: center; align-items: center; gap: 1rem; height: 100px; background: rgba(56, 189, 248, 0.05); border-radius: 12px; border: 1px dashed var(--aqua); }
+.molecule { width: 20px; height: 20px; background: var(--aqua); border-radius: 50%; box-shadow: 0 0 10px var(--aqua); transition: all 0.5s ease; }
+/* A velocidade da animação será controlada via JS inline */
+@keyframes vibrate { 
+  0%, 100% { transform: translate(0, 0); } 
+  25% { transform: translate(2px, -2px); } 
+  50% { transform: translate(-2px, 2px); } 
+  75% { transform: translate(2px, 2px); } 
+}
+
+/* =========================================
+   7. SIMULADOR ROBÓTICO AVANÇADO
+   ========================================= */
+#simulador { background: var(--bg2); }
+.sim-grid { display: grid; grid-template-columns: 380px 1fr; gap: 2rem; align-items: start; }
+@media (max-width: 1000px) { .sim-grid { grid-template-columns: 1fr; } }
+
+.sim-controls { padding: 1.5rem; }
+.sim-controls h3 { font-family: var(--f-disp); margin-bottom: 1.5rem; color: var(--ink); display: flex; align-items: center; gap: 0.5rem; }
+
+.scenario-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; margin-bottom: 1.5rem; }
+.scenario-btn { 
+  font-family: var(--f-mono); font-size: 0.7rem; padding: 0.6rem; 
+  background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 8px; 
+  color: var(--ink2); cursor: pointer; transition: all 0.2s; text-align: center; 
+}
+.scenario-btn:hover { border-color: var(--aqua); color: var(--ink); background: rgba(56, 189, 248, 0.1); }
+.scenario-btn.active { background: var(--aqua); color: #000; border-color: var(--aqua); font-weight: 700; }
+
+.control-group { margin-bottom: 1.5rem; }
+.control-group label { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem; color: var(--ink2); }
+.control-group output { color: var(--amber); font-weight: 700; font-size: 0.9rem; }
+
+input[type=range] { 
+  appearance: none; width: 100%; height: 8px; border-radius: 99px; border: 1px solid var(--line);
+  background: linear-gradient(90deg, var(--bg), var(--aqua), var(--orange)); cursor: pointer; 
+}
+input[type=range]::-webkit-slider-thumb { 
+  appearance: none; width: 22px; height: 22px; border-radius: 50%; background: #fff; 
+  border: 3px solid var(--bg); box-shadow: 0 0 10px rgba(0,0,0,0.5); cursor: grab; transition: transform 0.1s;
+}
+input[type=range]::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.2); }
+
+.logic-display { 
+  background: rgba(0,0,0,0.3); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem; margin: 1.5rem 0; 
+}
+.logic-rule { font-family: var(--f-mono); font-size: 0.8rem; color: var(--ink2); margin-bottom: 0.5rem; display: block; }
+.logic-result { font-family: var(--f-disp); font-size: 1.1rem; font-weight: 700; transition: color 0.3s; }
+.logic-result.ok { color: var(--teal); }
+.logic-result.fail { color: #f87171; }
+
+.status-lamp { 
+  display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem; border-radius: 8px; 
+  background: rgba(255,255,255,0.02); border: 1px solid var(--line); margin-bottom: 0.8rem; 
+  font-family: var(--f-mono); font-size: 0.85rem; transition: all 0.3s;
+}
+.status-lamp.on { background: rgba(45, 212, 191, 0.1); border-color: var(--teal); color: var(--teal); }
+.status-lamp.on .dot { background: var(--teal); box-shadow: 0 0 10px var(--teal); }
+.status-lamp .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink2); transition: all 0.3s; }
+
+/* Diagrama SVG e Canvas */
+.diagram-container { position: relative; }
+.system-diagram { padding: 2rem; display: flex; align-items: center; justify-content: center; min-height: 350px; }
+.pipe-flow { opacity: 0.15; transition: opacity 0.4s ease; }
+.pipe-flow.active { opacity: 1; animation: flowDash 1s linear infinite; }
+@keyframes flowDash { to { stroke-dashoffset: -16; } }
+.pump-icon-svg { transform-origin: 260px 180px; transition: transform 0.3s ease; }
+.pump-icon-svg.active { animation: spin 1.5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.sun-ray { stroke-dasharray: 4; animation: rayMove 1s linear infinite; opacity: 0; transition: opacity 0.5s; }
+.sun-ray.active { opacity: 1; }
+@keyframes rayMove { to { stroke-dashoffset: -8; } }
+
+.chart-container { margin-top: 1.5rem; padding: 1rem; background: rgba(0,0,0,0.2); border-radius: 12px; border: 1px solid var(--line); }
+.chart-container h4 { font-family: var(--f-mono); font-size: 0.75rem; color: var(--ink2); margin-bottom: 0.5rem; text-transform: uppercase; }
+#tempChart { width: 100%; height: 120px; }
+
+/* =========================================
+   8. ACESSIBILIDADE E FOOTER
+   ========================================= */
+#a11y-info { background: var(--bg); border-top: 1px solid var(--line); }
+.a11y-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; }
+.a11y-item { padding: 1.5rem; }
+.a11y-item h4 { color: var(--teal); margin-bottom: 0.8rem; font-family: var(--f-disp); display: flex; align-items: center; gap: 0.5rem; }
+.a11y-item p { font-size: 0.95rem; color: var(--ink2); line-height: 1.6; }
+
+footer { padding: 4rem 0 2rem; background: #01040f; border-top: 1px solid var(--line); text-align: center; color: var(--ink2); font-size: 0.9rem; }
+footer nav ul { list-style: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 2rem; margin: 2rem 0; }
+footer nav a { color: var(--ink2); font-family: var(--f-mono); font-size: 0.8rem; }
+footer nav a:hover { color: var(--amber); }
+
+[vw] { z-index: 9999 !important; }
+</style>
+</head>
+<body>
+
+<a href="#main-content" class="skip">Pular para o conteúdo principal</a>
+<div class="bg-mesh" aria-hidden="true"></div>
+<div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+<header class="topbar">
+  <a href="#" class="brand">
+    <span class="brand-sun" aria-hidden="true"></span>
+    HÉLIOS<em>·CEP</em>
+  </a>
+  <button class="hamb" aria-label="Abrir menu de navegação" aria-expanded="false" onclick="toggleMenu()">☰</button>
+  <nav id="mainNav" aria-label="Navegação principal">
+    <a href="#desafio">O Desafio</a>
+    <a href="#pilares">Pilares</a>
+    <a href="#fisica">Física da Radiação</a>
+    <a href="#simulador">Simulador IoT</a>
+    <a href="#a11y-info">Acessibilidade</a>
+  </nav>
+  <div class="a11y-tools" role="group" aria-label="Ferramentas de acessibilidade">
+    <button onclick="speakPage()" aria-label="Ouvir conteúdo da página" title="Ler em Voz Alta">🔊</button>
+    <button onclick="toggleContrast()" aria-label="Alternar alto contraste" aria-pressed="false" title="Alto Contraste">👁️</button>
+    <button onclick="toggleDyslexia()" aria-label="Alternar fonte para dislexia" aria-pressed="false" title="Fonte Dislexia">Aa</button>
+  </div>
+</header>
+
+<main id="main-content">
+  <!-- HERO -->
+  <section class="hero" id="hero">
+    <div class="wrap">
+      <div class="rv">
+        <div class="chips">
+          <span class="chip">⚛️ Física</span>
+          <span class="chip">🤖 Robótica</span>
+          <span class="chip">💻 Programação</span>
+          <span class="chip">♿ WCAG 2.1</span>
+        </div>
+        <h1>Radiação <span class="sol">Solar</span> e o Aquecimento da <span class="agua">Piscina</span></h1>
+        <p class="tagline">Um sistema autônomo e inteligente que une a física da radiação eletromagnética, sensores robóticos e lógica de programação para otimizar o aquecimento com sustentabilidade e inclusão digital.</p>
+        <a href="#simulador" class="btn">Testar o Simulador Interativo ↓</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- DESAFIO -->
+  <section id="desafio">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="sec-num">01 / CONTEXTO</div>
+        <h2>O Desafio do Aquecimento Sustentável</h2>
+        <p class="lead">Como utilizar a ciência e a tecnologia para tornar o aquecimento de piscinas mais eficiente, barato e acessível?</p>
+      </div>
+      <div class="desafio-grid">
+        <div class="rv">
+          <ul class="questions-list">
+            <li>
+              <strong>1. Propagação</strong>
+              Como a radiação solar se propaga até a superfície terrestre sem precisar de um meio material?
+            </li>
+            <li>
+              <strong>2. Espectro Eletromagnético</strong>
+              Qual é a diferença prática entre radiação ultravioleta, visível e infravermelha no aquecimento?
+            </li>
+            <li>
+              <strong>3. Transferência de Energia</strong>
+              Como a energia da radiação é transferida para as moléculas de água, aumentando sua temperatura?
+            </li>
+          </ul>
+        </div>
+        <div class="rv glass-panel" style="padding: 2rem; transition-delay: 0.2s;">
+          <h3 style="color: var(--aqua); margin-bottom: 1rem; font-family: var(--f-disp);">🎯 Conexão com o Projeto</h3>
+          <p style="color: var(--ink2); margin-bottom: 1.5rem;">Este site é parte da solução. Aqui você encontra:</p>
+          <ul style="list-style: none; color: var(--ink); display: grid; gap: 0.8rem;">
+            <li style="display: flex; align-items: center; gap: 0.8rem;"><span style="color: var(--teal);">✅</span> <strong>Simuladores interativos</strong> de lógica de programação e sensores.</li>
+            <li style="display: flex; align-items: center; gap: 0.8rem;"><span style="color: var(--teal);">✅</span> <strong>Visualizador de Espectro</strong> interativo das faixas de radiação.</li>
+            <li style="display: flex; align-items: center; gap: 0.8rem;"><span style="color: var(--teal);">✅</span> <strong>Animações de moléculas</strong> demonstrando a agitação térmica.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PILARES -->
+  <section id="pilares">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="sec-num">02 / INTEGRAÇÃO</div>
+        <h2>Pilares do Projeto Integrador</h2>
+      </div>
+      <div class="pillars-grid">
+        <article class="pillar-card glass-panel physics rv">
+          <span class="pillar-icon">⚛️</span>
+          <h3>Física (Tecnociência)</h3>
+          <p>Estudo da radiação eletromagnética, leis da termodinâmica e transferência de calor por radiação e convecção na água.</p>
+        </article>
+        <article class="pillar-card glass-panel robotics rv" style="transition-delay: 0.1s;">
+          <span class="pillar-icon">🤖</span>
+          <h3>Robótica (Sensores)</h3>
+          <p>Uso de sensores de temperatura (DS18B20) e de radiação (ML8511) para coleta de dados ambientais em tempo real.</p>
+        </article>
+        <article class="pillar-card glass-panel code rv" style="transition-delay: 0.2s;">
+          <span class="pillar-icon">💻</span>
+          <h3>Programação</h3>
+          <p>Desenvolvimento da lógica condicional (IF/ELSE) que controla a bomba solar e o aquecedor auxiliar baseado nos dados dos sensores.</p>
+        </article>
+        <article class="pillar-card glass-panel a11y rv" style="transition-delay: 0.3s;">
+          <span class="pillar-icon">♿</span>
+          <h3>Acessibilidade & Impacto</h3>
+          <p>Design universal, VLibras, navegação por teclado e conscientização sobre sustentabilidade energética e inclusão digital.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- FÍSICA DA RADIAÇÃO -->
+  <section id="fisica">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="sec-num">03 / PROFUNDIDADE CIENTÍFICA</div>
+        <h2>A Física da Radiação Solar</h2>
+        <p class="lead">Passe o mouse sobre as faixas do espectro abaixo para entender como cada uma interage com a água da piscina.</p>
+      </div>
+      
+      <div class="spectrum-container rv">
+        <div class="spectrum-bar" role="group" aria-label="Espectro eletromagnético interativo">
+          <div class="spectrum-segment" data-label="UV (8%)" onmouseenter="showSpectrum('uv')" onfocus="showSpectrum('uv')" tabindex="0"></div>
+          <div class="spectrum-segment" data-label="Visível (47%)" onmouseenter="showSpectrum('vis')" onfocus="showSpectrum('vis')" tabindex="0"></div>
+          <div class="spectrum-segment" data-label="Infravermelho (45%)" onmouseenter="showSpectrum('ir')" onfocus="showSpectrum('ir')" tabindex="0"></div>
+        </div>
+        
+        <div class="spectrum-info">
+          <div class="spectrum-text" id="spectrumText">
+            <h4>☀️ O Espectro Completo</h4>
+            <p>A luz do Sol é composta por diferentes faixas de energia. Passe o mouse ou use o teclado (Tab) nas faixas coloridas acima para ver detalhes sobre como cada uma contribui (ou não) para o aquecimento da água.</p>
+          </div>
+          <div class="molecule-box" aria-hidden="true">
+            <div class="molecule" id="mol1" style="animation: vibrate 2s infinite;"></div>
+            <div class="molecule" id="mol2" style="animation: vibrate 2.2s infinite;"></div>
+            <div class="molecule" id="mol3" style="animation: vibrate 1.8s infinite;"></div>
+            <div class="molecule" id="mol4" style="animation: vibrate 2.1s infinite;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-panel rv" style="margin-top: 2rem; padding: 2rem;">
+        <h3 style="color: var(--aqua); margin-bottom: 1rem;">🌡️ Transferência de Calor e Convecção</h3>
+        <p style="color: var(--ink2); line-height: 1.8;">Quando a radiação (principalmente Infravermelha e Visível) penetra na água, seus fótons colidem com as moléculas de H₂O. Essa colisão transfere energia, fazendo com que as moléculas vibrem mais rapidamente (aumento da energia cinética média, ou seja, <strong>temperatura</strong>). A água aquecida na superfície fica menos densa e sobe, enquanto a água fria do fundo desce, criando <strong>correntes de convecção</strong>. O sistema de bombeamento do nosso projeto acelera artificialmente esse processo, homogeneizando a temperatura.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIMULADOR ROBÓTICO -->
+  <section id="simulador">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="sec-num">04 / INTERATIVIDADE E ROBÓTICA</div>
+        <h2>Simulador do Sistema Autônomo (IoT)</h2>
+        <p class="lead">Ajuste os sensores virtuais ou escolha um cenário climático. Observe a lógica de programação (IF/ELSE) controlar os atuadores em tempo real.</p>
+      </div>
+
+      <div class="sim-grid rv">
+        <!-- Controles -->
+        <div class="sim-controls glass-panel">
+          <h3>🎛️ Painel de Controle</h3>
+          
+          <div class="scenario-btns">
+            <button class="scenario-btn" onclick="setScenario('sunny')">☀️ Ensolarado</button>
+            <button class="scenario-btn" onclick="setScenario('cloudy')">⛅ Nublado</button>
+            <button class="scenario-btn" onclick="setScenario('night')">🌙 Noite</button>
+          </div>
+
+          <div class="control-group">
+            <label for="radiationInput">
+              Sensor de Radiação (LDR/ML8511)
+              <output id="radiationVal">600 W/m²</output>
+            </label>
+            <input type="range" id="radiationInput" min="0" max="1200" value="600" step="10" aria-valuemin="0" aria-valuemax="1200" aria-valuenow="600">
+          </div>
+
+          <div class="control-group">
+            <label for="tempInput">
+              Temperatura Desejada (Setpoint)
+              <output id="tempTargetVal">28 °C</output>
+            </label>
+            <input type="range" id="tempInput" min="20" max="35" value="28" step="1" aria-valuemin="20" aria-valuemax="35" aria-valuenow="28">
+          </div>
+
+          <div class="logic-display">
+            <span class="logic-rule">Lógica do Microcontrolador:</span>
+            <span class="logic-result ok" id="logicDisplay">SE radiação > 400: Bomba Solar ATIVADA</span>
+          </div>
+
+          <div class="status-lamp off" id="pumpStatus" role="status" aria-live="polite">
+            <span class="dot"></span> Bomba de Circulação Solar
+          </div>
+          <div class="status-lamp off" id="heaterStatus" role="status" aria-live="polite">
+            <span class="dot"></span> Aquecedor Auxiliar (Elétrico)
+          </div>
+
+          <div class="chart-container">
+            <h4>Histórico de Temperatura (Simulado)</h4>
+            <canvas id="tempChart" aria-label="Gráfico de linha mostrando a tendência de temperatura"></canvas>
+          </div>
+        </div>
+
+        <!-- Visualização Gráfica -->
+        <div class="diagram-container">
+          <div class="glass-panel system-diagram" aria-label="Diagrama animado do sistema de aquecimento">
+            <svg viewBox="0 0 400 280" role="img" aria-label="Esquema do sistema: sol, painel solar, bomba, canos e piscina">
+              <!-- Sol -->
+              <circle cx="80" cy="60" r="30" fill="#fbbf24" opacity="0.9">
+                <animate attributeName="r" values="30;34;30" dur="3s" repeatCount="indefinite" />
+              </circle>
+              <!-- Raios (controlados por JS) -->
+              <path id="ray1" class="sun-ray" d="M 110 60 L 150 90" stroke="#fbbf24" stroke-width="3" />
+              <path id="ray2" class="sun-ray" d="M 90 90 L 130 110" stroke="#fbbf24" stroke-width="3" style="animation-delay: 0.3s" />
+              <path id="ray3" class="sun-ray" d="M 60 80 L 100 120" stroke="#fbbf24" stroke-width="3" style="animation-delay: 0.6s" />
+              
+              <!-- Painel Solar -->
+              <g transform="rotate(-10 185 105)">
+                <rect x="140" y="80" width="90" height="50" fill="#0f172a" stroke="#38bdf8" stroke-width="2" rx="4"/>
+                <line x1="150" y1="95" x2="220" y2="85" stroke="#38bdf8" stroke-width="1" opacity="0.5"/>
+                <line x1="150" y1="110" x2="220" y2="100" stroke="#38bdf8" stroke-width="1" opacity="0.5"/>
+                <line x1="150" y1="125" x2="220" y2="115" stroke="#38bdf8" stroke-width="1" opacity="0.5"/>
+              </g>
+
+              <!-- Canos -->
+              <path id="pipeFlow" class="pipe-flow" d="M 220 110 L 260 110 L 260 180 L 300 180" fill="none" stroke="#2dd4bf" stroke-width="8" stroke-dasharray="10 6" stroke-linecap="round"/>
+              <path class="pipe-flow" d="M 340 220 L 360 220 L 360 140 L 240 140 L 240 120" fill="none" stroke="#38bdf8" stroke-width="8" stroke-dasharray="10 6" stroke-linecap="round" style="animation-direction: reverse;"/>
+
+              <!-- Bomba -->
+              <g id="pumpIcon" class="pump-icon-svg">
+                <circle cx="260" cy="180" r="22" fill="#f97316" stroke="#fff" stroke-width="2"/>
+                <text x="251" y="187" fill="#000" font-family="monospace" font-size="18" font-weight="bold">P</text>
+              </g>
+
+              <!-- Piscina -->
+              <rect x="300" y="160" width="100" height="70" fill="#0f172a" stroke="#38bdf8" stroke-width="3" rx="6"/>
+              <path d="M 300 180 Q 325 175 350 180 T 400 180" fill="none" stroke="#f8fafc" stroke-width="2" opacity="0.6">
+                <animate attributeName="d" values="M 300 180 Q 325 175 350 180 T 400 180; M 300 180 Q 325 185 350 180 T 400 180; M 300 180 Q 325 175 350 180 T 400 180" dur="3s" repeatCount="indefinite"/>
+              </path>
+              <text x="320" y="200" fill="#fff" font-family="var(--f-mono)" font-size="12" font-weight="bold">PISCINA</text>
+
+              <!-- Sensor -->
+              <rect x="320" y="145" width="60" height="16" fill="#94a3b8" rx="3"/>
+              <text x="328" y="157" fill="#000" font-family="var(--f-mono)" font-size="9" font-weight="bold">SENSOR T°</text>
+              <line x1="350" y1="161" x2="350" y2="165" stroke="#94a3b8" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACESSIBILIDADE -->
+  <section id="a11y-info">
+    <div class="wrap">
+      <div class="sec-head rv">
+        <div class="sec-num">05 / INCLUSÃO</div>
+        <h2>Compromisso com a Acessibilidade</h2>
+        <p class="lead">Este projeto segue as diretrizes WCAG 2.1, garantindo que o conhecimento científico seja universal e democrático.</p>
+      </div>
+      <div class="a11y-grid rv">
+        <div class="glass-panel a11y-item">
+          <h4>🤟 VLibras Integrado</h4>
+          <p>Widget oficial do governo brasileiro ativo no canto direito, traduzindo o conteúdo textual para Libras (Língua Brasileira de Sinais) em tempo real.</p>
+        </div>
+        <div class="glass-panel a11y-item">
+          <h4>🔊 Leitura em Voz Alta (TTS)</h4>
+          <p>Utilizamos a Web Speech API nativa do navegador. Clique no ícone 🔊 no topo da página para que o próprio site leia o conteúdo para você.</p>
+        </div>
+        <div class="glass-panel a11y-item">
+          <h4>⌨️ Navegação por Teclado</h4>
+          <p>Todo o site pode ser navegado usando a tecla <kbd style="background:var(--line); padding:2px 6px; border-radius:4px; color:var(--ink);">Tab</kbd>. Links de "pular para conteúdo" e focos visíveis garantem autonomia total.</p>
+        </div>
+        <div class="glass-panel a11y-item">
+          <h4>👁️ Alto Contraste e Dislexia</h4>
+          <p>Botões dedicados no topo alternam para um tema de contraste validado (amarelo sobre preto) e aplicam a fonte <em>Lexend</em>, projetada especificamente para facilitar a leitura de pessoas com dislexia.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><strong>HÉLIOS·CEP</strong> — Projeto Integrador 3TRI</p>
+    <p style="margin-top: 0.5rem; opacity: 0.7;">Física · Robótica · Programação · Sustentabilidade</p>
+    
+    <nav aria-label="Mapa do site">
+      <ul>
+        <li><a href="#hero">Início</a></li>
+        <li><a href="#desafio">O Desafio</a></li>
+        <li><a href="#pilares">Pilares</a></li>
+        <li><a href="#fisica">Física da Radiação</a></li>
+        <li><a href="#simulador">Simulador</a></li>
+        <li><a href="#a11y-info">Acessibilidade</a></li>
+      </ul>
+    </nav>
+    
+    <p style="font-size: 0.8rem; margin-top: 2rem; opacity: 0.5;">© 2026 Desenvolvido com foco em inclusão digital e conscientização ambiental.</p>
+  </div>
+</footer>
+
+<!-- WIDGET VLIBRAS -->
+<div vw class="enabled">
+  <div vw-access-button class="active"></div>
+  <div vw-plugin-wrapper>
+    <div class="vw-plugin-top-wrapper"></div>
+  </div>
+</div>
+<script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+<script>
+  new window.VLibras.Widget('https://vlibras.gov.br/app');
+</script>
+
+<!-- LÓGICA DO SITE -->
+<script>
+  // 1. Menu Mobile
+  function toggleMenu() {
+    const nav = document.getElementById('mainNav');
+    const btn = document.querySelector('.hamb');
+    const isOpen = nav.classList.toggle('open');
+    btn.setAttribute('aria-expanded', isOpen);
+    btn.textContent = isOpen ? '✕' : '☰';
+  }
+
+  // 2. Acessibilidade: Alto Contraste
+  function toggleContrast() {
+    document.body.classList.toggle('hc');
+    const btn = document.querySelector('button[aria-label="Alternar alto contraste"]');
+    const isPressed = document.body.classList.contains('hc');
+    btn.setAttribute('aria-pressed', isPressed);
+    localStorage.setItem('helios-contrast', isPressed);
+  }
+
+  // 3. Acessibilidade: Fonte Dislexia
+  function toggleDyslexia() {
+    document.body.classList.toggle('dyslexia');
+    const btn = document.querySelector('button[aria-label="Alternar fonte para dislexia"]');
+    const isPressed = document.body.classList.contains('dyslexia');
+    btn.setAttribute('aria-pressed', isPressed);
+    localStorage.setItem('helios-dyslexia', isPressed);
+  }
+
+  // 4. Acessibilidade: Text-to-Speech (Inovação)
+  function speakPage() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Para qualquer fala anterior
+      const text = document.querySelector('main').innerText;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'pt-BR';
+      utterance.rate = 0.9; // Um pouco mais lento para clareza
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert('Seu navegador não suporta leitura em voz alta.');
+    }
+  }
+
+  // Restaurar preferências
+  if (localStorage.getItem('helios-contrast') === 'true') { document.body.classList.add('hc'); document.querySelector('button[aria-label="Alternar alto contraste"]').setAttribute('aria-pressed', 'true'); }
+  if (localStorage.getItem('helios-dyslexia') === 'true') { document.body.classList.add('dyslexia'); document.querySelector('button[aria-label="Alternar fonte para dislexia"]').setAttribute('aria-pressed', 'true'); }
+
+  // 5. Espectro Interativo
+  const spectrumData = {
+    uv: { title: "🟣 Radiação Ultravioleta (UV)", text: "Alta frequência e alta energia (8% do total). É a responsável por queimaduras solares e degradação de materiais. Aquece muito pouco diretamente, mas sua energia é bloqueada parcialmente pela camada de ozônio.", color: "#8a2be2", speed: "0.5s" },
+    vis: { title: "🟢 Luz Visível", text: "A faixa que nossos olhos enxergam (47% do total). Penetra na água e é parcialmente absorvida, contribuindo moderadamente para o aquecimento. É a faixa de maior intensidade energética que chega ao solo.", color: "#00ff00", speed: "1.5s" },
+    ir: { title: "🔴 Radiação Infravermelha (IV)", text: "Baixa frequência, mas é a PRINCIPAL responsável pelo aquecimento direto (45% do total). É o 'calor radiante'. Quando atinge a água, faz as moléculas vibrarem intensamente, aumentando a temperatura.", color: "#ff0000", speed: "0.2s" }
+  };
+
+  function showSpectrum(type) {
+    const data = spectrumData[type];
+    const textEl = document.getElementById('spectrumText');
+    textEl.innerHTML = `<h4 style="color: ${data.color}">${data.title}</h4><p>${data.text}</p>`;
+    
+    // Atualiza a animação das moléculas para refletir a energia
+    document.querySelectorAll('.molecule').forEach(mol => {
+      mol.style.animationDuration = data.speed;
+      mol.style.background = type === 'ir' ? '#f97316' : (type === 'vis' ? '#38bdf8' : '#8a2be2');
+      mol.style.boxShadow = `0 0 15px ${mol.style.background}`;
+    });
+  }
+
+  // 6. Simulador Robótico Avançado
+  const radiationInput = document.getElementById('radiationInput');
+  const tempInput = document.getElementById('tempInput');
+  const radiationVal = document.getElementById('radiationVal');
+  const tempTargetVal = document.getElementById('tempTargetVal');
+  const logicDisplay = document.getElementById('logicDisplay');
+  const pumpStatus = document.getElementById('pumpStatus');
+  const heaterStatus = document.getElementById('heaterStatus');
+  const pipeFlow = document.getElementById('pipeFlow');
+  const pumpIcon = document.getElementById('pumpIcon');
+  const rays = document.querySelectorAll('.sun-ray');
+
+  // Dados para o gráfico
+  let chartData = Array(30).fill(25);
+  const canvas = document.getElementById('tempChart');
+  const ctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+  }
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+
+  function drawChart() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.beginPath();
+    ctx.moveTo(0, canvas.height - (chartData[0] - 20) * (canvas.height / 15));
+    
+    for (let i = 1; i < chartData.length; i++) {
+      const x = (i / (chartData.length - 1)) * canvas.width;
+      const y = canvas.height - (chartData[i] - 20) * (canvas.height / 15);
+      ctx.lineTo(x, y);
+    }
+    
+    ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--teal');
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Preenchimento
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--teal-glow');
+    ctx.fill();
+  }
+
+  function setScenario(type) {
+    document.querySelectorAll('.scenario-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    if (type === 'sunny') {
+      radiationInput.value = 950;
+      tempInput.value = 28;
+    } else if (type === 'cloudy') {
+      radiationInput.value = 250;
+      tempInput.value = 27;
+    } else if (type === 'night') {
+      radiationInput.value = 0;
+      tempInput.value = 26;
+    }
+    updateSimulator();
+  }
+
+  function updateSimulator() {
+    const radiation = parseInt(radiationInput.value);
+    const targetTemp = parseInt(tempInput.value);
+    
+    radiationVal.textContent = radiation + ' W/m²';
+    radiationInput.setAttribute('aria-valuenow', radiation);
+    tempTargetVal.textContent = targetTemp + ' °C';
+    tempInput.setAttribute('aria-valuenow', targetTemp);
+
+    // Física simulada: Temp base 20°C + aquecimento proporcional à radiação
+    const currentTemp = 20 + (radiation / 1200) * 16;
+    
+    // Atualizar gráfico
+    chartData.shift();
+    chartData.push(currentTemp);
+    drawChart();
+
+    // Lógica de Programação (IF / ELSE)
+    let systemMessage = "";
+    let isPumpOn = false;
+    let isHeaterOn = false;
+
+    if (radiation > 400) {
+      isPumpOn = true;
+      systemMessage = "SE radiação > 400 W/m²: Bomba Solar ATIVADA (Energia Gratuita)";
+      logicDisplay.className = "logic-result ok";
+    } else {
+      if (currentTemp < targetTemp) {
+        isHeaterOn = true;
+        systemMessage = "SENÃO SE temp < desejada: Aquecedor Auxiliar LIGADO (Gasto Energético)";
+        logicDisplay.className = "logic-result fail";
+      } else {
+        systemMessage = "SENÃO: Temperatura OK. Sistema em espera (Economia de energia)";
+        logicDisplay.className = "logic-result ok";
+      }
+    }
+
+    // Atualizar UI
+    pumpStatus.className = 'status-lamp ' + (isPumpOn ? 'on' : 'off');
+    heaterStatus.className = 'status-lamp ' + (isHeaterOn ? 'on' : 'off');
+    logicDisplay.textContent = systemMessage;
+
+    // Animações SVG
+    if (isPumpOn || isHeaterOn) {
+      pipeFlow.classList.add('active');
+      pumpIcon.classList.add('active');
+    } else {
+      pipeFlow.classList.remove('active');
+      pumpIcon.classList.remove('active');
+    }
+
+    // Raios do sol baseados na radiação
+    rays.forEach(ray => {
+      if (radiation > 100) ray.classList.add('active');
+      else ray.classList.remove('active');
+    });
+  }
+
+  radiationInput.addEventListener('input', updateSimulator);
+  tempInput.addEventListener('input', updateSimulator);
+
+  // Loop de animação do gráfico
+  setInterval(() => {
+    // Adiciona uma pequena variação aleatória para parecer um sensor real
+    const noise = (Math.random() - 0.5) * 0.2;
+    const currentTemp = 20 + (parseInt(radiationInput.value) / 1200) * 16 + noise;
+    chartData.shift();
+    chartData.push(currentTemp);
+    drawChart();
+  }, 500);
+
+  // Inicializar
+  updateSimulator();
+
+  // 7. Scroll Progress Bar e Reveal on Scroll
+  window.addEventListener('scroll', () => {
+    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+    const scrolled = (winScroll / height) * 100;
+    document.getElementById('progressBar').style.width = scrolled + "%";
+
+    document.querySelectorAll('.rv').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight - 50) {
+        el.classList.add('in');
+      }
+    });
+  });
+
+  window.dispatchEvent(new Event('scroll'));
+</script>
+</body>
+</html>
